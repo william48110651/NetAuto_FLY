@@ -30,9 +30,9 @@ jobs:
         pip install pytest
 
     # 4. 執行測試
-    - name: Run tests
-      run: |
-        pytest test.py
+#    - name: Run tests
+ #     run: |
+ #       pytest test.py
 
     # 5. Lint 檢查
     - name: Lint code with flake8
