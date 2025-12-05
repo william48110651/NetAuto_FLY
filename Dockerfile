@@ -1,8 +1,13 @@
 # 使用官方 Python 3.12 輕量版
-FROM python:3.12-slim
+FROM python:3.10-slim
 
 # 設定工作目錄
 WORKDIR /app
+
+# 安裝必要套件（Netmiko 需要 libffi、libssl、ssh client）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libffi-dev libssl-dev openssh-client \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 複製依賴檔
 COPY requirements.txt .

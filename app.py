@@ -1,16 +1,25 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request
 from netmiko import ConnectHandler
 import yaml
+import os
 
 app = Flask(__name__)
 
-# Load devices from YAML
-with open("devices.yaml", "r") as f:
-    devices = yaml.safe_load(f)["devices"]
+def load_devices():
+    """Safely load devices.yaml. If missing or malformed, return empty list."""
+    try:
+        with open("devices.yaml", "r") as f:
+            data = yaml.safe_load(f)
+            return data.get("devices", [])
+    except Exception:
+        return []
+
+# Load at startup but keep a function for flexibility (hot reload or future DB)
+devices = load_devices()
 
 @app.route("/")
 def index():
-    return render_template("index.html", devices=devices)
+    return render_template("index.html", devices=devices, logs=None)
 
 @app.route("/deploy", methods=["POST"])
 def deploy():
@@ -31,22 +40,29 @@ def deploy():
         try:
             logs.append(f"\n🔗 Connecting to {host} ...")
 
+            # Log file path inside container
+            session_log_path = "/tmp/netmiko.log"
+
             net_connect = ConnectHandler(
-            **device,
-            fast_cli=False,
-            global_delay_factor=2,
-            conn_timeout=30,
-            blocking_timeout=20,
-            session_log="netmiko.log"
+                **device,
+                fast_cli=False,
+                global_delay_factor=2,
+                conn_timeout=30,
+                blocking_timeout=20,
+                session_log=session_log_path,
             )
 
-            net_connect.enable()
+            # Some devices need enable
+            try:
+                net_connect.enable()
+            except Exception:
+                pass
 
             config_commands = [
                 f"vlan {vlan_id}",
                 f"name {vlan_name}",
                 f"interface {interface}",
-                f"switchport mode access",
+                "switchport mode access",
                 f"switchport access vlan {vlan_id}"
             ]
 
@@ -68,4 +84,5 @@ def deploy():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))   # ← 適用 Docker/Fly.io
+    app.run(host="0.0.0.0", port=port)
