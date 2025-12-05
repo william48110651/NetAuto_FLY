@@ -51,7 +51,7 @@ jobs:
       run: |
         docker build -t myapp:latest .
 
-fly-deploy:
+  fly-deploy:
     name: Deploy to Fly.io
     runs-on: ubuntu-latest
     needs: docker-build
